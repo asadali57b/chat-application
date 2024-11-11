@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Socket.io Client</title>
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <h1>Socket.io Client</h1>
+  <script>
+    const socket = io('http://localhost:3000');
+
+    socket.on('connect', () => {
+      console.log('Connected to server');
+    });
+
+    socket.on('disconnect', () => {
+      console.log('Disconnected from server');
+    });
+  </script>
+</body>
+</html>

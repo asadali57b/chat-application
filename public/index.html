@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Application</title>
+    <style>
+        /* Basic styling */
+        body { font-family: Arial, sans-serif; }
+        .chat-container { max-width: 500px; margin: auto; }
+        .chat-box { height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; }
+        .message { padding: 5px; margin: 5px 0; }
+        .input-container { display: flex; margin-top: 10px; }
+        input[type="text"] { flex: 1; padding: 10px; }
+        button { padding: 10px; }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <h2>Real-Time Chat</h2>
+        <div class="chat-box" id="chat-box"></div>
+        <div class="input-container">
+            <input type="text" id="messageInput" placeholder="Type a message...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script>
+        const socket = io("http://localhost:3000");
+
+        // Listen for messages from server
+        socket.on("message", (message) => {
+            displayMessage(message);
+        });
+
+        // Send message to server
+        function sendMessage() {
+            const messageInput = document.getElementById("messageInput");
+            const message = messageInput.value;
+            socket.emit("chatMessage", message);
+            displayMessage(`You: ${message}`); // Display message in own chat window
+            messageInput.value = ""; // Clear the input
+        }
+
+        // Display message in chat box
+        function displayMessage(message) {
+            const chatBox = document.getElementById("chat-box");
+            const messageElement = document.createElement("div");
+            messageElement.classList.add("message");
+            messageElement.innerText = message;
+            chatBox.appendChild(messageElement);
+            chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll to the latest message
+        }
+    </script>
+</body>
+</html>
