@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -13,11 +15,21 @@
         .input-container { display: flex; margin-top: 10px; }
         input[type="text"] { flex: 1; padding: 10px; }
         button { padding: 10px; }
+        .user-list { margin-top: 20px; }
+        .user { display: flex; align-items: center; margin: 5px 0; }
+        .user img { width: 30px; height: 30px; border-radius: 50%; margin-right: 10px; }
+        .user .status { color: green; }
     </style>
 </head>
 <body>
     <div class="chat-container">
         <h2>Real-Time Chat</h2>
+
+        <!-- User List Section -->
+        <div class="user-list" id="user-list">
+            <h3>Users</h3>
+        </div>
+
         <div class="chat-box" id="chat-box"></div>
         <div class="input-container">
             <input type="text" id="messageInput" placeholder="Type a message...">
@@ -29,29 +41,203 @@
     <script>
         const socket = io("http://localhost:3000");
 
+        // Join a specific chat room (room name could be dynamic based on your application logic)
+        const chatRoom = "room1"; // Define room name
+        const sender = "User1"; // Replace with actual user name or ID
+        socket.emit("join_room", chatRoom);
+
         // Listen for messages from server
         socket.on("message", (message) => {
-            displayMessage(message);
+            displayMessage(`${message.sender}: ${message.content}`);
         });
 
         // Send message to server
         function sendMessage() {
             const messageInput = document.getElementById("messageInput");
-            const message = messageInput.value;
-            socket.emit("chatMessage", message);
-            displayMessage(`You: ${message}`); // Display message in own chat window
+            const content = messageInput.value;
+
+            // Emit the chat message with sender and room info
+            socket.emit("chatMessage", {
+                sender: sender,
+                content: content,
+                chat: chatRoom
+            });
+
+            displayMessage(`You: ${content}`); // Display message in own chat window
             messageInput.value = ""; // Clear the input
         }
 
         // Display message in chat box
-        function displayMessage(message) {
-            const chatBox = document.getElementById("chat-box");
-            const messageElement = document.createElement("div");
-            messageElement.classList.add("message");
-            messageElement.innerText = message;
-            chatBox.appendChild(messageElement);
-            chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll to the latest message
+        let token = null;
+
+// Login function
+async function login() {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    try {
+        const response = await fetch("http://localhost:3000/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        if (response.ok) {
+            token = data.token;
+            localStorage.setItem("token", token); // Store token for future requests
+            fetchUsers(); // Fetch users after login
+        } else {
+            console.error("Login failed:", data.message);
         }
+    } catch (error) {
+        console.error("Error:", error);
+    }
+}
+
+// Fetch users using JWT token
+async function fetchUsers() {
+    const token = localStorage.getItem("token");
+    if (!token) return console.error("No token found, please log in");
+
+    try {
+        const response = await fetch("http://localhost:3000/users", {
+            headers: { "Authorization": `Bearer ${token}` } // Attach JWT token
+        });
+        const users = await response.json();
+
+        if (response.ok) {
+            displayUsers(users);
+        } else {
+            console.error("Error fetching users:", users.message);
+        }
+    } catch (error) {
+        console.error("Error fetching users:", error);
+    }
+}
+
+// Display users in user list
+function displayUsers(users) {
+    const userList = document.getElementById("user-list");
+    userList.innerHTML = "<h3>Users</h3>"; // Clear existing list
+
+    users.forEach(user => {
+        const userElement = document.createElement("div");
+        userElement.classList.add("user");
+
+        // Create and append user image
+        const userImage = document.createElement("img");
+        userImage.src = user.image;
+        userElement.appendChild(userImage);
+
+        // Create and append user info (name, email, status)
+        const userInfo = document.createElement("div");
+        userInfo.innerHTML = `<strong>${user.name}</strong> <br> ${user.email}`;
+        
+        // Add online status indicator
+        const userStatus = document.createElement("span");
+        userStatus.classList.add("status");
+        userStatus.innerText = user.is_online === '1' ? "Online" : "Offline";
+        userInfo.appendChild(userStatus);
+
+        userElement.appendChild(userInfo);
+        userList.appendChild(userElement);
+    });
+}
+
+// Fetch users when the page loads if a token exists
+if (localStorage.getItem("token")) {
+    fetchUsers();
+}
+// let token = null;
+
+// Login function
+async function login() {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    try {
+        const response = await fetch("http://localhost:3000/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        if (response.ok) {
+            token = data.token;
+            localStorage.setItem("token", token); // Store token for future requests
+            fetchUsers(); // Fetch users after login
+        } else {
+            console.error("Login failed:", data.message);
+        }
+    } catch (error) {
+        console.error("Error:", error);
+    }
+}
+
+// Fetch users using JWT token
+async function fetchUsers() {
+    const token = localStorage.getItem("token");
+    if (!token) return console.error("No token found, please log in");
+
+    try {
+        const response = await fetch("http://localhost:3000/users", {
+            headers: { "Authorization": `Bearer ${token}` } // Attach JWT token
+        });
+        const users = await response.json();
+
+        if (response.ok) {
+            displayUsers(users);
+        } else {
+            console.error("Error fetching users:", users.message);
+        }
+    } catch (error) {
+        console.error("Error fetching users:", error);
+    }
+}
+
+// Display users in user list
+function displayUsers(users) {
+    const userList = document.getElementById("user-list");
+    userList.innerHTML = "<h3>Users</h3>"; // Clear existing list
+
+    users.forEach(user => {
+        const userElement = document.createElement("div");
+        userElement.classList.add("user");
+
+        // Create and append user image
+        const userImage = document.createElement("img");
+        userImage.src = user.image;
+        userElement.appendChild(userImage);
+
+        // Create and append user info (name, email, status)
+        const userInfo = document.createElement("div");
+        userInfo.innerHTML = `<strong>${user.name}</strong> <br> ${user.email}`;
+        
+        // Add online status indicator
+        const userStatus = document.createElement("span");
+        userStatus.classList.add("status");
+        userStatus.innerText = user.is_online === '1' ? "Online" : "Offline";
+        userInfo.appendChild(userStatus);
+
+        userElement.appendChild(userInfo);
+        userList.appendChild(userElement);
+    });
+}
+
+// Fetch users when the page loads if a token exists
+if (localStorage.getItem("token")) {
+    fetchUsers();
+}
+
     </script>
 </body>
 </html>
+<div class="login-container">
+    <h2>Login</h2>
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="login()">Login</button>
+</div>
+s

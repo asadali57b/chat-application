@@ -1,6 +1,9 @@
 
 const mongoose = require("mongoose");
 const http = require("http");
+const Message=require("./models/message_model")
+const User=require("./models/userModel");
+const Chat=require("./models/chatModel");
 
 const express = require("express");
 const {Server}=require("socket.io");
@@ -39,15 +42,45 @@ mongoose.connect("mongodb://localhost:27017/chat-application")
 
     io.on("connection", (socket) => {
         console.log("A new user has connected ",socket.id);
-        socket.on('chatMessage',message => {
-            io.emit('message',message);
-            console.log("A new User Message",message);
-        })
+        
+        socket.on("chatMessage", async (data) => {
+            const { content, chatId, senderId } = data;
+    
+            if (!content || !chatId || !senderId) {
+                console.log("Invalid data passed into chatMessage event");
+                return;
+            }
+    
+            const newMessage = {
+                sender: senderId,
+                content: content,
+                chat: chatId
+            };
+    
+            try {
+                let message = await Message.create(newMessage);
+    
+                message = await message.populate("sender", "name image");
+                message = await message.populate("chat");
+                message = await User.populate(message, {
+                    path: "chat.users",
+                    select: "name image email"
+                });
+    
+                await Chat.findByIdAndUpdate(chatId, { $set: { latestMessage: message } });
+    
+                io.to(chatId).emit("message", message);
+                console.log("Message saved and broadcasted:", message);
+            } catch (error) {
+                console.log("Error saving message:", error);
+            }
+        });
+        
         socket.on("join_room", (data) => {
             socket.join(data);
             console.log(`User with ID: ${socket.id} joined room: ${data}`);
         });
-
+          
         socket.on("typing", (room) => {
             socket.in(room).emit("typing");
         });
